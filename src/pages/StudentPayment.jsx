@@ -516,15 +516,6 @@ export default function Payment() {
             color="border-l-pink-500"
           />
         </div>
-
-        {/* Existing Plans and Payments Tables */}
-        <PlansTable
-          plans={plans}
-          onEditPlan={handleEditPlan}
-          onDeletePlan={handleDeletePlan}
-          onAddPlan={() => setIsAddOpen(true)}
-        />
-        <PaymentsTable payments={payments} />
       </div>
 
       <div className="container mx-auto px-4 py-8">
