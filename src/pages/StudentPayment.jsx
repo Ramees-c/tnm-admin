@@ -46,6 +46,31 @@ const Modal = ({ isOpen, onClose, children, size = "md" }) => {
   );
 };
 
+const StatsCard = ({ icon, title, value, color }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.5 }}
+    className={`bg-white rounded-xl shadow-sm border-l-4 ${color} p-6`}
+  >
+    <div className="flex items-center">
+      <div
+        className={`p-3 rounded-lg ${color
+          .replace("border-l-", "bg-")
+          .replace("-500", "-100")} ${color
+          .replace("border-l-", "text-")
+          .replace("-500", "-600")} mr-4`}
+      >
+        <i className={`${icon} text-xl`}></i>
+      </div>
+      <div>
+        <p className="text-sm font-medium text-gray-600">{title}</p>
+        <p className="text-2xl font-bold text-gray-800">{value}</p>
+      </div>
+    </div>
+  </motion.div>
+);
+
 // Input Field Component
 const InputField = ({
   label,
@@ -461,6 +486,47 @@ export default function Payment() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       <Header />
+      <div className="container mx-auto px-4 py-8">
+        {/* Stats Section */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <StatsCard
+            icon="fas fa-list"
+            title="Total Plans"
+            value={plans.length}
+            color="border-l-emerald-500"
+          />
+          <StatsCard
+            icon="fas fa-credit-card"
+            title="Total Payments"
+            value={payments.length}
+            color="border-l-indigo-500"
+          />
+          <StatsCard
+            icon="fas fa-rupee-sign"
+            title="Total Revenue"
+            value={`₹${payments.reduce((sum, p) => sum + (p.amount || 0), 0)}`}
+            color="border-l-yellow-500"
+          />
+          <StatsCard
+            icon="fas fa-users"
+            title="Unique Students"
+            value={
+              new Set(payments.map((p) => p.student_name || "Unknown")).size
+            }
+            color="border-l-pink-500"
+          />
+        </div>
+
+        {/* Existing Plans and Payments Tables */}
+        <PlansTable
+          plans={plans}
+          onEditPlan={handleEditPlan}
+          onDeletePlan={handleDeletePlan}
+          onAddPlan={() => setIsAddOpen(true)}
+        />
+        <PaymentsTable payments={payments} />
+      </div>
+
       <div className="container mx-auto px-4 py-8">
         <PlansTable
           plans={plans}
