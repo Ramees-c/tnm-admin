@@ -38,7 +38,6 @@ const PrivacyPolicy = () => {
       setIsLoading(true);
       try {
         const res = await api.get(`/static-pages/`);
-        console.log(res.data, "sfjkj");
 
         const privacyPage = res.data.find(
           (page) => page.page_type === "privacy"

@@ -38,34 +38,44 @@ const TermsAndConditions = () => {
 
   // Load from localStorage on mount
   useEffect(() => {
-    const fetchTerms = async () => {
-      try {
-        setIsLoading(true);
-        const res = await api.get("/static-pages/?page_type=terms");
-        if (res.data && res.data.length > 0) {
-          const page = res.data[0];
-          setSavedContent(page.content || "");
-          setContent(page.content || "");
-          setLastUpdated(
-            page.last_updated
-              ? new Date(page.last_updated).toLocaleString()
-              : ""
-          );
-        } else {
-          setContent(
-            `<p>Enter your comprehensive terms and conditions here. Include details about user agreements, privacy policies, usage guidelines, and legal information.</p>`
-          );
-        }
-      } catch (error) {
-        console.error("Error fetching Terms & Conditions:", error);
-        showNotification("Failed to load Terms & Conditions.", "error");
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchTerms = async () => {
+    setIsLoading(true);
+    try {
+      const res = await api.get(`/static-pages/`);
 
-    fetchTerms();
-  }, []);
+      const termsPage = res.data.find(
+        (page) => page.page_type === "terms"
+      );
+
+      if (termsPage) {
+        setContent(termsPage.content);
+        setSavedContent(termsPage.content);
+        setPageId(termsPage.id);
+        setLastUpdated(
+          new Date(termsPage.last_updated).toLocaleString("en-US", {
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })
+        );
+      } else {
+        setContent(
+          `<p>Enter your comprehensive terms and conditions here. Include details about user agreements, privacy policies, usage guidelines, and legal information.</p>`
+        );
+      }
+    } catch (error) {
+      console.error("Error loading Terms & Conditions:", error);
+      showNotification("Failed to load Terms & Conditions.", "error");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  fetchTerms();
+}, []);
+
 
   // Enhanced save handler
   const handleSave = async () => {

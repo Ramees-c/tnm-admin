@@ -39,14 +39,16 @@ const Refund = () => {
     const fetchRefundPolicy = async () => {
       setIsLoading(true);
       try {
-        const res = await api.get("/static-pages/?page_type=refund");
-        if (res.data.length > 0) {
-          const refundPage = res.data[0];
-          setPageId(refundPage.id);
+        const res = await api.get(`/static-pages/`);
+
+        const refundPage = res.data.find((page) => page.page_type === "refund");
+
+        if (refundPage) {
           setContent(refundPage.content);
           setSavedContent(refundPage.content);
+          setPageId(refundPage.id);
           setLastUpdated(
-            new Date(refundPage.updated_at).toLocaleString("en-US", {
+            new Date(refundPage.last_updated).toLocaleString("en-US", {
               year: "numeric",
               month: "long",
               day: "numeric",
@@ -59,9 +61,9 @@ const Refund = () => {
             `<p>Enter your comprehensive refund policy here. Include details about eligibility, timeframes, process, and contact information.</p>`
           );
         }
-      } catch (err) {
-        console.error("Error loading refund policy:", err);
-        showNotification("Failed to load refund policy.", "error");
+      } catch (error) {
+        console.error("Error loading Refund Policy:", error);
+        showNotification("Failed to load Refund Policy.", "error");
       } finally {
         setIsLoading(false);
       }
@@ -94,7 +96,6 @@ const Refund = () => {
         showNotification("Refund policy updated successfully!", "success");
       } else {
         const res = await api.post("/static-pages/", payload);
-        setPageId(res.data.id);
         showNotification("Refund policy created successfully!", "success");
       }
 
