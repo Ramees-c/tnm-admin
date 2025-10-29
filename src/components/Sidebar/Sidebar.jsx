@@ -27,7 +27,6 @@ import {
   HiReceiptRefund,
   HiQuestionMarkCircle,
   HiClipboardList,
-
 } from "react-icons/hi";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import api from "../../api";
@@ -37,102 +36,153 @@ function Sidebar({ isOpen, onClose }) {
   const location = useLocation();
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [activeItem, setActiveItem] = useState("");
+  const [role, setRole] = useState("");
 
   // Update active item based on current route
   useEffect(() => {
     setActiveItem(location.pathname);
   }, [location.pathname]);
 
+  useEffect(() => {
+    const storedRole = localStorage.getItem("role");
+    setRole(storedRole || "");
+  }, []);
+
   const handleLogout = async () => {
-    try {
-      await api.post("/logout/");
-      localStorage.removeItem("token");
-      setShowLogoutModal(false);
-      navigate("/login");
-    } catch (err) {
-      console.error("Logout failed:", err);
-      localStorage.removeItem("token");
-      setShowLogoutModal(false);
-      navigate("/login");
-    }
-  };
+  try {
+    await api.post("/logout/");
+  } catch (err) {
+    console.error("Logout failed:", err);
+  } finally {
+    // ✅ Clear everything from storage
+    localStorage.clear();
+
+    // ✅ Redirect to login page and prevent back navigation
+    navigate("/login", { replace: true });
+
+    // ✅ Optional: small delay to ensure navigation completes before blocking back
+    setTimeout(() => {
+      window.history.pushState(null, "", window.location.href);
+      window.onpopstate = () => {
+        window.history.pushState(null, "", window.location.href);
+      };
+    }, 100);
+  }
+};
+
 
   const menuItems = [
-    { path: "/", icon: HiChartBar, label: "Dashboard", color: "emerald" },
-    { path: "/tutor", icon: HiAcademicCap, label: "Tutors", color: "emerald" },
+    {
+      path: "/",
+      icon: HiChartBar,
+      label: "Dashboard",
+      color: "emerald",
+      roles: ["admin", "monitor", "financier"],
+    },
+    {
+      path: "/tutor",
+      icon: HiAcademicCap,
+      label: "Tutors",
+      color: "emerald",
+      roles: ["admin", "monitor"],
+    },
     {
       path: "/student",
       icon: HiUserGroup,
       label: "Students / Leads",
       color: "emerald",
+      roles: ["admin", "monitor"],
     },
     {
       path: "/course",
       icon: HiCollection,
       label: "Courses & Categories",
       color: "emerald",
+      roles: ["admin", "monitor"],
     },
     {
       path: "/assignment",
       icon: HiBookOpen,
       label: "Tutor Assigning",
       color: "emerald",
+      roles: ["admin", "monitor"],
     },
     {
       path: "/studentassign",
       icon: HiUserGroup,
       label: "Student Assigning",
       color: "emerald",
+      roles: ["admin", "monitor"],
     },
     {
       path: "/payment",
       icon: HiCash,
       label: "Package & Payments",
       color: "emerald",
+      roles: ["admin","financier"],
     },
-    { path: "/user", icon: HiUser, label: "Users", color: "emerald" },
+    {
+      path: "/user",
+      icon: HiUser,
+      label: "Users",
+      color: "emerald",
+      roles: ["admin"],
+    },
     {
       path: "/testmonio",
       icon: HiStar,
       label: "Testimonials",
       color: "emerald",
+      roles: ["admin"],
     },
-    { path: "/blog", icon: HiDocumentText, label: "Blog", color: "emerald" },
+    {
+      path: "/blog",
+      icon: HiDocumentText,
+      label: "Blog",
+      color: "emerald",
+      roles: ["admin"],
+    },
 
     {
       path: "/studentpayment",
       icon: HiCash,
       label: "student plan",
       color: "emerald",
+      roles: ["admin", "financier"],
     },
     {
       path: "/faq",
       icon: HiQuestionMarkCircle,
       label: "faq",
       color: "emerald",
+      roles: ["admin"],
     },
     {
       path: "/privacy",
       icon: HiShieldCheck,
       label: "Privacy",
       color: "emerald",
+      roles: ["admin"],
     },
     {
       path: "/terms",
       icon: HiClipboardList,
       label: "Terms & Conditions",
       color: "emerald",
+      roles: ["admin"],
     },
     {
       path: "/refund",
       icon: HiReceiptRefund,
       label: "Refund Policy",
       color: "emerald",
+      roles: ["admin"],
     },
-    
   ];
 
-  const getColorClasses = (color, isActive = false) => {
+  const getColorClasses = (color, isActive = false, disabled = false) => {
+    if (disabled)
+      return "opacity-50 cursor-not-allowed bg-gray-50 text-gray-400 border-gray-100";
     const colorMap = {
       blue: isActive
         ? "bg-blue-50 text-blue-600 border-blue-200"
@@ -217,34 +267,38 @@ function Sidebar({ isOpen, onClose }) {
               <p className="text-xs text-gray-500">Management Portal</p>
             </div>
           </div>
-           <button
-            onClick={onClose}
-            className="lg:hidden"
-          >
+          <button onClick={onClose} className="lg:hidden">
             <HiX className="w-5 h-5 text-gray-600" />
           </button>
         </div>
-
-       
 
         <SidebarItems>
           <SidebarItemGroup className="space-y-1">
             {menuItems.map((item) => {
               const isActive = activeItem === item.path;
+              const isDisabled = item.roles
+                ? !item.roles.includes(role)
+                : false;
               const IconComponent = item.icon;
 
               return (
                 <SidebarItem
                   key={item.path}
-                  as={Link}
-                  to={item.path}
-                  onClick={() => onClose(false)}
+                  as={isDisabled ? "div" : Link} // 🧠 render a <div> if disabled
+                  to={isDisabled ? undefined : item.path}
+                  onClick={(e) => {
+                    if (isDisabled) {
+                      e.preventDefault(); // 🛑 stop redirect
+                      return;
+                    }
+                    onClose(false);
+                  }}
                   icon={IconComponent}
                   className={`
                     py-3 px-3 rounded-xl transition-all duration-200 font-medium
                     transform hover:scale-[1.02] hover:shadow-sm
                     border-2 border-transparent
-                    ${getColorClasses(item.color, isActive)}
+                    ${getColorClasses(item.color, isActive, isDisabled)}
                     ${isActive ? "shadow-sm scale-[1.02]" : ""}
                   `}
                 >
@@ -257,8 +311,6 @@ function Sidebar({ isOpen, onClose }) {
                 </SidebarItem>
               );
             })}
-
-            
 
             {/* Logout Button */}
             <div className="pt-4 mt-4 border-t border-gray-100">

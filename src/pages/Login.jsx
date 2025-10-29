@@ -46,8 +46,8 @@
 //       <div className="absolute top-10 left-10 w-72 h-72 bg-emerald-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob"></div>
 //       <div className="absolute top-10 right-10 w-72 h-72 bg-teal-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-2000"></div>
 //       <div className="absolute bottom-10 left-20 w-72 h-72 bg-green-200 rounded-full mix-blend-multiply filter blur-xl opacity-30 animate-blob animation-delay-4000"></div>
-      
-//       <motion.div 
+
+//       <motion.div
 //         initial={{ opacity: 0, y: 20 }}
 //         animate={{ opacity: 1, y: 0 }}
 //         transition={{ duration: 0.5 }}
@@ -59,10 +59,10 @@
 //             <h1 className="text-2xl font-bold text-white">Admin Portal</h1>
 //             <p className="text-emerald-100 mt-1">Sign in to access the dashboard</p>
 //           </div>
-          
+
 //           <form onSubmit={handleSubmit} className="px-8 py-8">
 //             {error && (
-//               <motion.div 
+//               <motion.div
 //                 initial={{ opacity: 0, height: 0 }}
 //                 animate={{ opacity: 1, height: "auto" }}
 //                 className="mb-4 p-3 bg-red-50 text-red-700 rounded-lg text-sm"
@@ -70,7 +70,7 @@
 //                 {error}
 //               </motion.div>
 //             )}
-            
+
 //             <div className="mb-5">
 //               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
 //                 Email Address
@@ -93,7 +93,7 @@
 //                 />
 //               </div>
 //             </div>
-            
+
 //             <div className="mb-6">
 //               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
 //                 Password
@@ -115,7 +115,7 @@
 //                 />
 //               </div>
 //             </div>
-            
+
 //             <motion.button
 //               whileHover={{ scale: 1.02 }}
 //               whileTap={{ scale: 0.98 }}
@@ -136,21 +136,21 @@
 //               )}
 //             </motion.button>
 //           </form>
-          
+
 //           <div className="bg-gray-50 py-4 px-8 text-center border-t border-gray-100">
 //             <p className="text-xs text-gray-600">
 //               Secure admin access only. Unauthorized attempts are prohibited.
 //             </p>
 //           </div>
 //         </div>
-        
+
 //         <div className="mt-6 text-center">
 //           <p className="text-sm text-gray-600">
 //             © {new Date().getFullYear()} Admin Portal • All rights reserved
 //           </p>
 //         </div>
 //       </motion.div>
-      
+
 //       <style jsx>{`
 //         @keyframes blob {
 //           0% { transform: translate(0px, 0px) scale(1); }
@@ -173,10 +173,6 @@
 // };
 
 // export default Login;
-
-
-
-
 
 // import React, { useState } from "react";
 // import { useNavigate } from "react-router-dom";
@@ -351,7 +347,6 @@
 
 // export default Login;
 
-
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -373,20 +368,24 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const payload = loginType === "admin"
-        ? { email, password }
-        : { username, password };
+      const payload =
+        loginType === "admin" ? { email, password } : { username, password };
 
       const endpoint = loginType === "admin" ? "/login/" : "/username-login/";
 
       const { data } = await api.post(endpoint, payload); // centralized API call
 
       localStorage.setItem("token", data.token);
-      // optionally store role: localStorage.setItem("role", data.role);
+      localStorage.setItem("role", data.role);
 
       navigate("/"); // redirect to dashboard
     } catch (err) {
-      setError(err.response?.data?.detail || err.response?.data?.message || err.message || "Login failed");
+      setError(
+        err.response?.data?.detail ||
+          err.response?.data?.message ||
+          err.message ||
+          "Login failed"
+      );
     } finally {
       setLoading(false);
     }
@@ -395,7 +394,6 @@ const Login = () => {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-emerald-50 to-teal-100 p-4">
       {/* Decorative blobs */}
-     
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -419,7 +417,10 @@ const Login = () => {
           {/* Login Type Toggle */}
           <div className="flex justify-center space-x-4 mt-4">
             {["admin", "user"].map((type) => (
-              <label key={type} className="flex items-center space-x-2 cursor-pointer">
+              <label
+                key={type}
+                className="flex items-center space-x-2 cursor-pointer"
+              >
                 <input
                   type="radio"
                   value={type}
@@ -453,16 +454,22 @@ const Login = () => {
                 required
                 value={loginType === "admin" ? email : username}
                 onChange={(e) =>
-                  loginType === "admin" ? setEmail(e.target.value) : setUsername(e.target.value)
+                  loginType === "admin"
+                    ? setEmail(e.target.value)
+                    : setUsername(e.target.value)
                 }
-                placeholder={loginType === "admin" ? "admin@example.com" : "username"}
+                placeholder={
+                  loginType === "admin" ? "admin@example.com" : "username"
+                }
                 className="w-full pl-3 pr-3 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-colors duration-200"
               />
             </div>
 
             {/* Password */}
             <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Password
+              </label>
               <input
                 type="password"
                 required
@@ -497,4 +504,3 @@ const Login = () => {
 };
 
 export default Login;
-
