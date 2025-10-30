@@ -26,6 +26,7 @@ import Terms from "./pages/Terms";
 import RoleBasedRoute from "./components/RoleBasedRoute";
 import Unauthorized from "./pages/Unauthorized";
 import NotFoundPage from "./pages/NotFoundPage";
+import ScrollToTop from "./components/ScrollToTop";
 
 export default function App() {
   const location = useLocation();
@@ -71,6 +72,7 @@ export default function App() {
 
   return (
     <div className="flex flex-col h-screen">
+      <ScrollToTop />
       {/* Show navbar only if not on login page */}
       {!hideLayout && (
         <UserNavbar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
