@@ -1,0 +1,1 @@
+export const MEDIA_URL = "https://api-tnm.tutor-nearme.com"
