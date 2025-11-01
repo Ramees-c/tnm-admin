@@ -13,6 +13,7 @@
     "@ckeditor/ckeditor5-build-classic": "^41.4.2",
     "@ckeditor/ckeditor5-react": "^7.0.0",
     "@fortawesome/fontawesome-free": "^7.0.1",
+    "@tailwindcss/typography": "^0.5.19",
     "axios": "^1.11.0",
     "chart.js": "^4.5.0",
     "ckeditor4-react": "^5.2.1",

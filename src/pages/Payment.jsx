@@ -240,22 +240,30 @@ const PaymentsTable = ({ payments }) => (
                 })}
               </td>
               <td className="py-4 px-6">
-                <motion.span
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-                    pay.status === "paid"
-                      ? "bg-green-100 text-green-800"
-                      : "bg-amber-100 text-amber-800"
-                  }`}
-                >
-                  <i
-                    className={`fas ${
-                      pay.status === "paid" ? "fa-check-circle" : "fa-clock"
-                    } mr-1`}
-                  ></i>
-                  {pay.status.charAt(0).toUpperCase() + pay.status.slice(1)}
-                </motion.span>
+                {pay.upgradedFrom ? (
+                  <span className="text-sm text-indigo-700 font-medium">
+                    Upgraded{" "}
+                    <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                      {pay.upgradedFrom}
+                    </span>{" "}
+                    →{" "}
+                    <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                      {pay.plan_name}
+                    </span>
+                  </span>
+                ) : (
+                  <motion.span
+                    initial={{ scale: 0.8, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium ${
+                      pay.status === "paid"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-amber-100 text-amber-800"
+                    }`}
+                  >
+                    {pay.plan_name}
+                  </motion.span>
+                )}
               </td>
             </motion.tr>
           ))}
@@ -349,21 +357,21 @@ export default function Payment() {
   const fetchPayments = async () => {
     try {
       setPaymentsLoading(true);
-
-      // Axios GET request
       const res = await api.get("/histories/");
-
-      // Axios returns data in res.data
       const data = res.data.histories || [];
 
-      // Map backend data to frontend table structure
+      // Step 1: Parse backend date safely
       const formatted = data.map((item) => {
-        // Parse date: backend sends 'DD-MM-YYYY HH:mm'
         let parsedDate = new Date();
         if (item.created_at) {
-          const [day, month, yearAndTime] = item.created_at.split("-");
-          const [year, time] = yearAndTime.split(" ");
-          parsedDate = new Date(`${year}-${month}-${day}T${time}:00`);
+          const str = item.created_at.trim();
+          if (/^\d{2}-\d{2}-\d{4}/.test(str)) {
+            const [day, month, yearAndTime] = str.split("-");
+            const [year, time = "00:00"] = yearAndTime.split(" ");
+            parsedDate = new Date(`${year}-${month}-${day}T${time}:00`);
+          } else if (/^\d{4}-\d{2}-\d{2}/.test(str)) {
+            parsedDate = new Date(str.replace(" ", "T") + ":00");
+          }
         }
 
         return {
@@ -371,13 +379,42 @@ export default function Payment() {
           tutor_name:
             item.tutor_name || item.tutor?.full_name || "Unknown Tutor",
           plan_name: item.plan_name || item.plan || "N/A",
-          amount: item.amount || item.price || 0,
+          amount: item.actual_price || 0,
           date: parsedDate,
           status: item.status || "pending",
         };
       });
 
-      setPayments(formatted);
+      // Step 2: Sort by date (latest first)
+      const sorted = formatted.sort((a, b) => b.date - a.date);
+
+      // Step 3: Keep only latest record per tutor and detect upgrades
+      const latestByTutor = [];
+      const tutorMap = new Map();
+
+      for (const payment of sorted) {
+        const tutor = payment.tutor_name;
+        const existing = tutorMap.get(tutor);
+
+        if (!existing) {
+          // find older plan for upgrade comparison
+          const older = sorted.find(
+            (p) =>
+              p.tutor_name === tutor &&
+              p.date < payment.date &&
+              p.plan_name !== payment.plan_name
+          );
+
+          tutorMap.set(tutor, {
+            ...payment,
+            upgradedFrom: older ? older.plan_name : null,
+          });
+        }
+      }
+
+      latestByTutor.push(...tutorMap.values());
+
+      setPayments(latestByTutor);
     } catch (err) {
       console.error("Error fetching payments:", err);
       alert("Error fetching payments");
@@ -386,6 +423,7 @@ export default function Payment() {
     }
   };
 
+  console.log(payments);
   // Calculate stats
   // -- after this existing code:
   const totalRevenue = payments
