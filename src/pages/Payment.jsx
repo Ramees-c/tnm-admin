@@ -423,7 +423,6 @@ export default function Payment() {
     }
   };
 
-  console.log(payments);
   // Calculate stats
   // -- after this existing code:
   const totalRevenue = payments

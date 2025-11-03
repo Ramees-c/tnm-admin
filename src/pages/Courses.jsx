@@ -786,144 +786,113 @@ export default function Course() {
   }, []);
 
   const handleAddToHomePage = async (category, newValue, isAuto = false) => {
-    // Prevent unticking a parent if any of its subcategories are still selected
-    if (
-      !newValue &&
-      category.subcategories?.some((sub) => sub.add_to_homepage)
-    ) {
-      return; // blocked: no UI change, no toast, no API
-    }
+  // 🧩 Block unchecking parent if subcategories are still checked
+  if (
+    !newValue &&
+    category.subcategories?.some((sub) => sub.add_to_homepage)
+  ) {
+    return;
+  }
 
-    // 1) Update only the clicked category (no automatic child toggling)
-    const updateCategoryTree = (categories) =>
-      categories.map((cat) => {
-        if (cat.id === category.id) {
-          return { ...cat, add_to_homepage: newValue };
-        }
-        if (cat.subcategories?.length > 0) {
-          return {
-            ...cat,
-            subcategories: updateCategoryTree(cat.subcategories),
-          };
-        }
-        return cat;
-      });
-
-    // 2) Propagate upwards: if any child is checked → parent true; if all unchecked → parent false
-    const propagateUpwards = (categories) =>
-      categories.map((cat) => {
-        if (cat.subcategories?.length > 0) {
-          const updatedSubs = propagateUpwards(cat.subcategories);
-          const anyChildChecked = updatedSubs.some((s) => s.add_to_homepage);
-          const allUnchecked = updatedSubs.every((s) => !s.add_to_homepage);
-
-          return {
-            ...cat,
-            subcategories: updatedSubs,
-            add_to_homepage: anyChildChecked
-              ? true
-              : allUnchecked
-              ? false
-              : cat.add_to_homepage,
-          };
-        }
-        return cat;
-      });
-
-    // 3) Ensure root/top parents reflect children states (deep-check)
-    const enforceTopParents = (categories) => {
-      const deepCheck = (cat) => {
-        if (!cat.subcategories?.length) return cat.add_to_homepage;
-        return (
-          cat.add_to_homepage || cat.subcategories.some((s) => deepCheck(s))
-        );
-      };
-      return categories.map((cat) => ({
-        ...cat,
-        add_to_homepage: deepCheck(cat),
-      }));
-    };
-
-    // 4) NEW: When a node is checked manually, mark its ancestor(s) true
-    // Returns [updatedCategories, foundFlag]
-    const markAncestorsTrue = (categories, childId) => {
-      let foundHere = false;
-      const updated = categories.map((cat) => {
-        if (cat.subcategories?.length > 0) {
-          const [updatedSubs, foundInSubs] = markAncestorsTrue(
-            cat.subcategories,
-            childId
-          );
-          // if found in subtree, we must ensure this parent is true
-          if (foundInSubs) {
-            foundHere = true;
-            // only change if not already true
-            return {
-              ...cat,
-              add_to_homepage: true,
-              subcategories: updatedSubs,
-            };
-          }
-          return { ...cat, subcategories: updatedSubs };
-        }
-        // if this cat is the child itself, bubble up found flag
-        if (cat.id === childId) {
-          return cat; // child's own add_to_homepage already set earlier
-        }
-        return cat;
-      });
-
-      // detect if the childId is directly one of the cats (leaf matched)
-      const directFound = categories.some((c) => c.id === childId);
-      return [updated, foundHere || directFound];
-    };
-
-    // 5) Force the clicked category state after all propagation (avoid override)
-    const forceUpdateClicked = (categories) =>
-      categories.map((cat) => {
-        if (cat.id === category.id) {
-          return { ...cat, add_to_homepage: newValue };
-        }
-        if (cat.subcategories?.length > 0) {
-          return {
-            ...cat,
-            subcategories: forceUpdateClicked(cat.subcategories),
-          };
-        }
-        return cat;
-      });
-
-    // ===== Optimistic UI update (apply all transformations) =====
-    setCategories((prev) => {
-      let updated = updateCategoryTree(prev); // set clicked node
-      updated = propagateUpwards(updated); // ensure parents reflect children
-      updated = enforceTopParents(updated); // global sanity
-      // If the clicked action was to set a node true, ensure its ancestors become true:
-      if (newValue) {
-        const [withAncestorsMarked] = markAncestorsTrue(updated, category.id);
-        updated = withAncestorsMarked;
+  // === Helper: update clicked category ===
+  const updateClicked = (cats) =>
+    cats.map((cat) => {
+      if (cat.id === category.id) {
+        return { ...cat, add_to_homepage: newValue };
       }
-      // finally, ensure clicked node retains its exact value (prevent propagation overwrite)
-      updated = forceUpdateClicked(updated);
-      return updated;
+      if (cat.subcategories?.length > 0) {
+        return {
+          ...cat,
+          subcategories: updateClicked(cat.subcategories),
+        };
+      }
+      return cat;
     });
 
-    // ===== API call + toast only for manual clicks =====
-    if (!isAuto) {
-      try {
-        await api.patch(`/category/${category.id}/update/`, {
-          add_to_homepage: newValue,
-        });
-        addToast(
-          `Category ${newValue ? "added to" : "removed from"} homepage`,
-          "success"
-        );
-      } catch (error) {
-        console.error("Error updating category:", error);
-        addToast("Failed to update homepage status", "error");
+  // === Helper: bubble child → parent ===
+  const bubbleUp = (cats) =>
+    cats.map((cat) => {
+      if (cat.subcategories?.length > 0) {
+        const updatedSubs = bubbleUp(cat.subcategories);
+        const anyChecked = updatedSubs.some((s) => s.add_to_homepage);
+        return {
+          ...cat,
+          subcategories: updatedSubs,
+          add_to_homepage: anyChecked || cat.add_to_homepage,
+        };
       }
-    }
+      return cat;
+    });
+
+  // === Helper: enforce global parent-child sanity ===
+  const deepFix = (cats) =>
+    cats.map((cat) => {
+      if (!cat.subcategories?.length) return cat;
+      const subs = deepFix(cat.subcategories);
+      const anyChildChecked = subs.some((s) => s.add_to_homepage);
+      return {
+        ...cat,
+        subcategories: subs,
+        add_to_homepage: anyChildChecked || cat.add_to_homepage,
+      };
+    });
+
+  // === Helper: ensure ancestors true when checking a child ===
+  const ensureAncestorsTrue = (cats, id) => {
+    let found = false;
+    const updated = cats.map((cat) => {
+      if (cat.subcategories?.length > 0) {
+        const [newSubs, foundInChild] = ensureAncestorsTrue(
+          cat.subcategories,
+          id
+        );
+        if (foundInChild) {
+          found = true;
+          return {
+            ...cat,
+            add_to_homepage: true,
+            subcategories: newSubs,
+          };
+        }
+        return { ...cat, subcategories: newSubs };
+      }
+      if (cat.id === id) {
+        found = true;
+      }
+      return cat;
+    });
+    return [updated, found];
   };
+
+  // ✅ Unified transformation (in safe order)
+  setCategories((prev) => {
+    let updated = updateClicked(prev);
+    if (newValue) {
+      const [withAncestors] = ensureAncestorsTrue(updated, category.id);
+      updated = withAncestors;
+    }
+    updated = bubbleUp(updated);
+    updated = deepFix(updated);
+    return updated;
+  });
+
+  // ===== API call + toast =====
+  if (!isAuto) {
+    try {
+      await api.patch(`/category/${category.id}/update/`, {
+        add_to_homepage: newValue,
+      });
+      addToast(
+        `Category ${newValue ? "added to" : "removed from"} homepage`,
+        "success"
+      );
+    } catch (error) {
+      console.error("Error updating category:", error);
+      addToast("Failed to update homepage status", "error");
+    }
+  }
+};
+
 
   // Calculate statistics
   const stats = useMemo(() => {
